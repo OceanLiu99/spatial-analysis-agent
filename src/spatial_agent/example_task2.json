@@ -1,0 +1,96 @@
+{
+    "workflow_name": "Calculate FAR for each parcel",
+    "task_statement": "计算每个地块的容积率（总建筑面积/地块面积）。",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "projected CRS recommended",
+        "linear_unit": "meters",
+        "area_unit": "square_meters"
+    },
+    "inputs": [
+        {
+            "layer_name": "parcel",
+            "geometry_type": "polygon",
+            "required_fields": ["parcel_id", "parcel_area"],
+            "notes": "parcel_area 代表地块面积"
+        },
+        {
+            "layer_name": "building",
+            "geometry_type": "polygon",
+            "required_fields": ["building_id", "building_area", "story"],
+            "notes": "总建筑面积 = building_area * story"
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Calculate Field",
+            "purpose": "计算单体建筑的总建筑面积",
+            "parameters": {
+                "field": "total_bldg_area",
+                "expression": "!building_area! * !story!",
+                "expression_type": "PYTHON3"
+            },
+            "inputs": [{"source": "input", "layer_name": "building"}],
+            "outputs": [{
+                "name": "building_with_area",
+                "type": "feature_class",
+                "geometry_type": "polygon",
+                "new_fields": ["total_bldg_area"],
+                "path_hint": "project.gdb/building_with_area"
+            }],
+            "qc_checks": [{"check": "面积应大于0", "how": "min(total_bldg_area)", "pass_condition": ">0"}]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Spatial Join",
+            "purpose": "将建筑总面积按地块汇总",
+            "parameters": {
+                "target_features": "parcel",
+                "join_features": "S1.building_with_area",
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "match_option": "HAVE_THEIR_CENTER_IN",
+                "summary_fields": [{"field": "total_bldg_area", "statistic": "SUM", "out_field": "sum_bldg_area"}]
+            },
+            "inputs": [
+                {"source": "input", "layer_name": "parcel"},
+                {"source": "step_output", "layer_name": "S1.building_with_area"}
+            ],
+            "outputs": [{
+                "name": "parcel_sum_area",
+                "type": "feature_class",
+                "geometry_type": "polygon",
+                "new_fields": ["sum_bldg_area"],
+                "path_hint": "project.gdb/parcel_sum_area"
+            }],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S3",
+            "tool": "Calculate Field",
+            "purpose": "计算容积率 (FAR)",
+            "parameters": {
+                "field": "FAR",
+                "expression": "!sum_bldg_area! / !parcel_area!",
+                "expression_type": "PYTHON3"
+            },
+            "inputs": [{"source": "step_output", "layer_name": "S2.parcel_sum_area"}],
+            "outputs": [{
+                "name": "parcel_with_far",
+                "type": "feature_class",
+                "geometry_type": "polygon",
+                "new_fields": ["FAR"],
+                "path_hint": "project.gdb/parcel_with_far"
+            }],
+            "qc_checks": [{"check": "FAR不为空", "how": "null_count(FAR)", "pass_condition": "==0"}]
+        }
+    ],
+    "outputs": [{
+        "name": "parcel_with_far",
+        "type": "feature_class",
+        "geometry_type": "polygon",
+        "fields": ["parcel_id", "FAR"],
+        "description": "带有容积率字段的地块图层"
+    }],
+    "assumptions": ["建筑中心点落在地块内即视为该地块建筑"]
+}

@@ -1,0 +1,28 @@
+{
+    "workflow_name": "Community with most metro stations",
+    "task_statement": "选出芝加哥市里有最多地铁站点的community。",
+    "arcgis_context": { "workspace": "project.gdb", "coordinate_system": "projected", "linear_unit": "meters", "area_unit": "square_meters" },
+    "inputs": [
+        { "layer_name": "chicago_community", "geometry_type": "polygon", "required_fields": ["community_name"] },
+        { "layer_name": "metro_station", "geometry_type": "point", "required_fields": ["station_id"] }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Spatial Join",
+            "purpose": "统计每个社区内的站点数量",
+            "parameters": {
+                "target_features": "chicago_community",
+                "join_features": "metro_station",
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "match_option": "CONTAINS",
+                "summary_fields": [{"field": "station_id", "statistic": "COUNT", "out_field": "station_count"}]
+            },
+            "inputs": [{"source": "input", "layer_name": "chicago_community"}, {"source": "input", "layer_name": "metro_station"}],
+            "outputs": [{ "name": "community_station_stats", "type": "feature_class", "geometry_type": "polygon", "new_fields": ["station_count"], "path_hint": "project.gdb/community_station_stats" }],
+            "qc_checks": []
+        }
+    ],
+    "outputs": [{ "name": "community_station_stats", "type": "feature_class", "geometry_type": "polygon", "fields": ["community_name", "station_count"], "description": "各社区地铁站数量统计" }],
+    "assumptions": []
+}

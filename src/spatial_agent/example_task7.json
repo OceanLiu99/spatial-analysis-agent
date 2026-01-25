@@ -1,0 +1,19 @@
+{
+    "workflow_name": "Select communities with age > 35",
+    "task_statement": "选出芝加哥市里平均人口年龄大于35岁的community。",
+    "arcgis_context": { "workspace": "project.gdb", "coordinate_system": "projected", "linear_unit": "meters", "area_unit": "square_meters" },
+    "inputs": [{ "layer_name": "chicago_community", "geometry_type": "polygon", "required_fields": ["community_name", "average_age"] }],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "属性筛选",
+            "parameters": { "where_clause": "average_age > 35" },
+            "inputs": [{"source": "input", "layer_name": "chicago_community"}],
+            "outputs": [{ "name": "community_age_gt35", "type": "feature_class", "geometry_type": "polygon", "new_fields": [], "path_hint": "project.gdb/community_age_gt35" }],
+            "qc_checks": [{"check": "平均年龄最小值", "how": "min(average_age)", "pass_condition": ">35"}]
+        }
+    ],
+    "outputs": [{ "name": "community_age_gt35", "type": "feature_class", "geometry_type": "polygon", "fields": ["community_name", "average_age"], "description": "老龄化社区筛选结果" }],
+    "assumptions": []
+}

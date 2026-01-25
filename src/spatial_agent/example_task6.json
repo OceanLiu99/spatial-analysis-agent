@@ -1,0 +1,49 @@
+{
+    "workflow_name": "Kernel Density for Dining POI in Loop",
+    "task_statement": "生成芝加哥市Loop district内餐饮POI的核密度图。",
+    "arcgis_context": { "workspace": "project.gdb", "coordinate_system": "projected", "linear_unit": "meters", "area_unit": "square_meters" },
+    "inputs": [
+        { "layer_name": "poi", "geometry_type": "point", "required_fields": ["poi_type"] },
+        { "layer_name": "chicago_community", "geometry_type": "polygon", "required_fields": ["community_name"] }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "筛选Loop区域",
+            "parameters": { "where_clause": "community_name = 'LOOP'" },
+            "inputs": [{"source": "input", "layer_name": "chicago_community"}],
+            "outputs": [{ "name": "loop_district", "type": "feature_layer", "geometry_type": "polygon", "new_fields": [], "path_hint": "memory/loop" }],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S2",
+            "tool": "Select features using attributes",
+            "purpose": "筛选餐饮类POI",
+            "parameters": { "where_clause": "poi_type = 'Dining'" },
+            "inputs": [{"source": "input", "layer_name": "poi"}],
+            "outputs": [{ "name": "dining_poi", "type": "feature_layer", "geometry_type": "point", "new_fields": [], "path_hint": "memory/dining_poi" }],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S3",
+            "tool": "Clip",
+            "purpose": "获取Loop内的餐饮POI",
+            "parameters": {},
+            "inputs": [{"source": "step_output", "layer_name": "S2.dining_poi"}, {"source": "step_output", "layer_name": "S1.loop_district"}],
+            "outputs": [{ "name": "loop_dining_poi", "type": "feature_class", "geometry_type": "point", "new_fields": [], "path_hint": "project.gdb/loop_dining_poi" }],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S4",
+            "tool": "Kernel Density",
+            "purpose": "生成核密度图",
+            "parameters": { "population_field": "NONE", "cell_size": 10, "search_radius": 200 },
+            "inputs": [{"source": "step_output", "layer_name": "S3.loop_dining_poi"}],
+            "outputs": [{ "name": "poi_density_raster", "type": "raster", "geometry_type": "raster", "new_fields": [], "path_hint": "project.gdb/poi_density_raster" }],
+            "qc_checks": []
+        }
+    ],
+    "outputs": [{ "name": "poi_density_raster", "type": "raster", "geometry_type": "raster", "fields": ["VALUE"], "description": "Loop区餐饮POI核密度图" }],
+    "assumptions": ["poi_type 字段中用 'Dining' 表示餐饮"]
+}
