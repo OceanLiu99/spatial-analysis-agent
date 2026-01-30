@@ -1,0 +1,59 @@
+{
+    "workflow_name": "Clip Parcel Features",
+    "task_statement": "Clip all parcel features within the Loop community boundary in Chicago.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "WGS 1984",
+        "linear_unit": "Meters",
+        "area_unit": "Square Meters"
+    },
+    "inputs": [
+        {
+            "layer_name": "parcel",
+            "geometry_type": "Polygon",
+            "required_fields": ["id"],
+            "optional_fields": [],
+            "notes": "Input parcel dataset."
+        },
+        {
+            "layer_name": "community",
+            "geometry_type": "Polygon",
+            "required_fields": ["id", "name"],
+            "optional_fields": [],
+            "notes": "Community boundaries."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Filter for the Loop community.",
+            "parameters": {"where_clause": "name = 'Loop'"},
+            "inputs": [{"source": "inputs", "layer_name": "community"}],
+            "outputs": [{"name": "loop_boundary", "type": "Feature Layer", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/loop_boundary"}],
+            "qc_checks": [{"check": "Check Selection", "how": "Verify selection is not empty.", "pass_condition": "Count > 0"}]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Clip",
+            "purpose": "Clip parcels to Loop boundary.",
+            "parameters": {},
+            "inputs": [
+                {"source": "inputs", "layer_name": "parcel"},
+                {"source": "S1.loop_boundary", "layer_name": "loop_boundary"}
+            ],
+            "outputs": [{"name": "clipped_parcels", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/clipped_parcels"}],
+            "qc_checks": [{"check": "Spatial Integrity", "how": "Check if output is within boundary.", "pass_condition": "True"}]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "clipped_parcels",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": ["id"],
+            "description": "Parcels strictly within the Loop community."
+        }
+    ],
+    "assumptions": ["Input data is projected in WGS 1984."]
+}

@@ -1,0 +1,31 @@
+{
+    "workflow_name": "Community with Most Metro Stations",
+    "task_statement": "Select the community with the highest number of metro stations in Chicago.",
+    "arcgis_context": { "workspace": "project.gdb", "coordinate_system": "WGS 1984", "linear_unit": "Meters", "area_unit": "Square Meters" },
+    "inputs": [
+        { "layer_name": "community", "geometry_type": "Polygon", "required_fields": ["id", "name"], "optional_fields": [], "notes": "" },
+        { "layer_name": "metro_station", "geometry_type": "Point", "required_fields": ["id"], "optional_fields": [], "notes": "" }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Spatial Join",
+            "purpose": "Count points in polygons.",
+            "parameters": {"join_operation": "JOIN_ONE_TO_ONE", "match_option": "COMPLETELY_CONTAINS"},
+            "inputs": [{"source": "inputs", "layer_name": "community"}, {"source": "inputs", "layer_name": "metro_station"}],
+            "outputs": [{"name": "community_counts", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["Join_Count"], "path_hint": "project.gdb/community_counts"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S2",
+            "tool": "Select features using attributes",
+            "purpose": "Find max Join_Count.",
+            "parameters": {"where_clause": "Join_Count = (SELECT MAX(Join_Count) FROM community_counts)"},
+            "inputs": [{"source": "S1.community_counts", "layer_name": "community_counts"}],
+            "outputs": [{"name": "top_community", "type": "Feature Layer", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/top_community"}],
+            "qc_checks": []
+        }
+    ],
+    "outputs": [{"name": "top_community", "type": "Feature Class", "geometry_type": "Polygon", "fields": ["name", "Join_Count"], "description": "Community with most stations."}],
+    "assumptions": ["Input data is projected in WGS 1984."]
+}

@@ -1,7 +1,7 @@
 import json
 
 # =================================================================
-# 1. System Instruction (系统级指令)
+# System Instruction (系统级指令)
 # 定义模型的人设、任务边界和输出规范
 # =================================================================
 SYSTEM_INSTRUCTION = """
@@ -9,7 +9,7 @@ SYSTEM_INSTRUCTION = """
 生成一个符合严格 JSON Schema 规范的 ArcGIS Pro 空间分析工作流（Workflow）。
 
 ### 核心规范：
-1. **工具限制**：只能使用提供的“工具白名单”中的工具。
+1. **工具限制**：只能使用提供的“工具名单”中的工具。
 2. **逻辑连贯**：步骤 S(n) 的输出（output）必须作为后续步骤 S(n+1) 的输入（input）进行引用。
 3. **坐标系假设**：除非特殊说明，假设所有输入数据均已处于投影坐标系。
 4. **输出格式**：输出必须是合法的 JSON 格式。
@@ -21,9 +21,9 @@ SYSTEM_INSTRUCTION = """
 """
 
 # =================================================================
-# 2. User Prompt Template
-# 动态拼接任务数据、Schema 约束和白名单
+# User Prompt Template
 # =================================================================
+
 def get_user_prompt(task_data, whitelist, schema_test):
     """
     将 task_data 中的任务详情、白名单和 Schema 拼接到一起
@@ -53,13 +53,17 @@ def get_user_prompt(task_data, whitelist, schema_test):
 
 ### 6. 开始生成：
 请直接返回符合上述要求的 JSON 对象，不要包含 Markdown 代码块标记（如 ```json ）。
+另外：
+1) 你可以做必要的 assumptions，但必须把每一条写进顶层 assumptions 数组。
+2) 如果任务描述里有不清楚或缺失的关键信息，请在顶层 clarifying_questions 数组里写出 1-3 个你会问用户的问题。
+3) 不要因为信息不全而停止生成 workflow。继续生成，但把不确定点写进 assumptions，并提出 clarifying_questions。
 """
     return prompt
 
 # =================================================================
-# 3. ArcGIS Pro Tool Whitelist
+# ArcGIS Pro Tool List
 # =================================================================
-ARCGIS_TOOL_WHITELIST = [
+ARCGIS_TOOL_LIST = [
     "Clip", "Buffer", "Spatial Join", "Intersect", 
     "Calculate Field", "Add Field", "Calculate Geometry Attributes", 
     "Kernel Density", "Feature To Point", 

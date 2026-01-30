@@ -1,0 +1,149 @@
+{
+    "workflow_name": "Chicago_Loop_Restaurant_Kernel_Density_Analysis",
+    "task_statement": "Generate a kernel density map of restaurant POIs within the Loop community in Chicago.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "NAD 1983 StatePlane Illinois East FIPS 1201 (US Feet)",
+        "linear_unit": "Feet",
+        "area_unit": "Square Feet"
+    },
+    "inputs": [
+        {
+            "layer_name": "chicago_community_areas",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "COMMUNITY"
+            ],
+            "optional_fields": [],
+            "notes": "Boundary layer for Chicago community areas."
+        },
+        {
+            "layer_name": "restaurant_pois",
+            "geometry_type": "Point",
+            "required_fields": [
+                "CATEGORY"
+            ],
+            "optional_fields": [],
+            "notes": "Point layer containing restaurant locations."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Isolate the Loop community boundary from the community areas layer.",
+            "parameters": {
+                "where_clause": "COMMUNITY = 'THE LOOP'",
+                "selection_type": "NEW_SELECTION"
+            },
+            "inputs": [
+                {
+                    "source": "chicago_community_areas",
+                    "layer_name": "chicago_community_areas"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "loop_boundary",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/loop_boundary"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Feature Count",
+                    "how": "Count the number of selected features",
+                    "pass_condition": "count == 1"
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Clip",
+            "purpose": "Extract restaurant POIs that fall within the Loop community boundary.",
+            "parameters": {},
+            "inputs": [
+                {
+                    "source": "restaurant_pois",
+                    "layer_name": "restaurant_pois"
+                },
+                {
+                    "source": "S1.loop_boundary",
+                    "layer_name": "loop_boundary"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "loop_restaurants",
+                    "type": "Feature Class",
+                    "geometry_type": "Point",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/loop_restaurants"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Spatial Containment",
+                    "how": "Verify all points are within the Loop boundary",
+                    "pass_condition": "all_within == true"
+                },
+                {
+                    "check": "Minimum Point Count",
+                    "how": "Check if any restaurants exist in the Loop",
+                    "pass_condition": "count > 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S3",
+            "tool": "Kernel Density",
+            "purpose": "Calculate the density of restaurants to identify hotspots within the Loop.",
+            "parameters": {
+                "population_field": "NONE",
+                "cell_size": 50,
+                "search_radius": 500,
+                "area_unit_scale_factor": "SQUARE_MILES"
+            },
+            "inputs": [
+                {
+                    "source": "S2.loop_restaurants",
+                    "layer_name": "loop_restaurants"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "restaurant_density_raster",
+                    "type": "Raster Dataset",
+                    "geometry_type": "Raster",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/restaurant_density_raster"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Raster Value Range",
+                    "how": "Check the maximum density value in the raster",
+                    "pass_condition": "max_value > 0"
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "restaurant_density_raster",
+            "type": "Raster Dataset",
+            "geometry_type": "Raster",
+            "fields": [
+                "Value"
+            ],
+            "description": "A kernel density raster representing the concentration of restaurants in the Chicago Loop."
+        }
+    ],
+    "assumptions": [
+        "The input 'chicago_community_areas' contains an attribute 'COMMUNITY' with the value 'THE LOOP'.",
+        "The coordinate system is projected to ensure accurate distance calculations for Kernel Density.",
+        "The search radius and cell size are appropriate for the urban scale of the Chicago Loop."
+    ]
+}

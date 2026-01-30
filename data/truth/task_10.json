@@ -1,0 +1,152 @@
+{
+    "workflow_name": "Community Renewal Potential Index",
+    "task_statement": "Generate a renewal potential index for each community based on building age and floor area ratio (FAR), where higher age and lower FAR indicate higher potential.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "WGS 1984",
+        "linear_unit": "Meters",
+        "area_unit": "Square Meters"
+    },
+    "inputs": [
+        {
+            "layer_name": "parcel",
+            "geometry_type": "Polygon",
+            "required_fields": ["id", "built_year"],
+            "optional_fields": [],
+            "notes": "Parcel data with construction year."
+        },
+        {
+            "layer_name": "community",
+            "geometry_type": "Polygon",
+            "required_fields": ["id", "name"],
+            "optional_fields": [],
+            "notes": "Community boundaries for aggregation."
+        },
+        {
+            "layer_name": "building",
+            "geometry_type": "Polygon",
+            "required_fields": ["story"],
+            "optional_fields": [],
+            "notes": "Building footprints with story counts."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate building footprint area.",
+            "parameters": {
+                "geometry_property": "AREA",
+                "area_unit": "SQUARE_METERS"
+            },
+            "inputs": [{"source": "inputs", "layer_name": "building"}],
+            "outputs": [{"name": "bldg_footprint", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["FOOTPRINT_AREA"], "path_hint": "project.gdb/bldg_footprint"}],
+            "qc_checks": [{"check": "Area exists", "how": "Check if FOOTPRINT_AREA > 0", "pass_condition": "True"}]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Calculate Field",
+            "purpose": "Calculate total floor area for each building.",
+            "parameters": {
+                "field_name": "BLDG_FLOOR_AREA",
+                "expression": "!FOOTPRINT_AREA! * !story!"
+            },
+            "inputs": [{"source": "S1.bldg_footprint", "layer_name": "bldg_footprint"}],
+            "outputs": [{"name": "bldg_floor_area", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["BLDG_FLOOR_AREA"], "path_hint": "project.gdb/bldg_floor_area"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S3",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate parcel area and age.",
+            "parameters": {
+                "geometry_property": "AREA",
+                "area_unit": "SQUARE_METERS"
+            },
+            "inputs": [{"source": "inputs", "layer_name": "parcel"}],
+            "outputs": [{"name": "parcel_metrics", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["LOT_AREA"], "path_hint": "project.gdb/parcel_metrics"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S4",
+            "tool": "Calculate Field",
+            "purpose": "Calculate parcel age.",
+            "parameters": {
+                "field_name": "Parcel_Age",
+                "expression": "2026 - !built_year!"
+            },
+            "inputs": [{"source": "S3.parcel_metrics", "layer_name": "parcel_metrics"}],
+            "outputs": [{"name": "parcel_with_age", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["Parcel_Age"], "path_hint": "project.gdb/parcel_with_age"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S5",
+            "tool": "Spatial Join",
+            "purpose": "Sum building areas per parcel to calculate FAR.",
+            "parameters": {
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "match_option": "COMPLETELY_CONTAINS",
+                "field_mapping": "BLDG_FLOOR_AREA SUM"
+            },
+            "inputs": [
+                {"source": "S4.parcel_with_age", "layer_name": "parcel_with_age"},
+                {"source": "S2.bldg_floor_area", "layer_name": "bldg_floor_area"}
+            ],
+            "outputs": [{"name": "parcel_sum_fa", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["SUM_BLDG_FLOOR_AREA"], "path_hint": "project.gdb/parcel_sum_fa"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S6",
+            "tool": "Calculate Field",
+            "purpose": "Calculate Parcel FAR.",
+            "parameters": {
+                "field_name": "Parcel_FAR",
+                "expression": "!SUM_BLDG_FLOOR_AREA! / !LOT_AREA!"
+            },
+            "inputs": [{"source": "S5.parcel_sum_fa", "layer_name": "parcel_sum_fa"}],
+            "outputs": [{"name": "parcel_final_metrics", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["Parcel_FAR"], "path_hint": "project.gdb/parcel_final_metrics"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S7",
+            "tool": "Spatial Join",
+            "purpose": "Aggregate Parcel Age and FAR to Community Level.",
+            "parameters": {
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "match_option": "COMPLETELY_CONTAINS",
+                "field_mapping": "Parcel_Age MEAN, Parcel_FAR MEAN"
+            },
+            "inputs": [
+                {"source": "inputs", "layer_name": "community"},
+                {"source": "S6.parcel_final_metrics", "layer_name": "parcel_final_metrics"}
+            ],
+            "outputs": [{"name": "comm_aggregated", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["MEAN_Parcel_Age", "MEAN_Parcel_FAR"], "path_hint": "project.gdb/comm_aggregated"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S8",
+            "tool": "Calculate Field",
+            "purpose": "Calculate Renewal Potential Index: Age / (FAR + 0.1) to handle low FAR.",
+            "parameters": {
+                "field_name": "Renewal_Potential",
+                "expression": "!MEAN_Parcel_Age! / (!MEAN_Parcel_FAR! + 0.1)"
+            },
+            "inputs": [{"source": "S7.comm_aggregated", "layer_name": "comm_aggregated"}],
+            "outputs": [{"name": "final_renewal_index", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["Renewal_Potential"], "path_hint": "project.gdb/final_renewal_index"}],
+            "qc_checks": [{"check": "Valid Index", "how": "Check if Renewal_Potential is null.", "pass_condition": "False"}]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "final_renewal_index",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": ["id", "MEAN_Parcel_Age", "MEAN_Parcel_FAR", "Renewal_Potential"],
+            "description": "Community layer with renewal potential index based on aging buildings and low land utilization."
+        }
+    ],
+    "assumptions": [
+        "Input data is projected in WGS 1984.",
+        "A constant (0.1) is added to FAR to prevent division by zero for undeveloped communities."
+    ]
+}

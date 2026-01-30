@@ -1,0 +1,235 @@
+{
+    "workflow_name": "Calculate Floor Area Ratio (FAR)",
+    "task_statement": "Calculate the floor area ratio for each parcel by aggregating building floor areas and dividing by parcel area.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "Projected Coordinate System (e.g., UTM)",
+        "linear_unit": "Meter",
+        "area_unit": "SquareMeter"
+    },
+    "inputs": [
+        {
+            "layer_name": "Parcels",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "Parcel_ID"
+            ],
+            "optional_fields": [],
+            "notes": "The base parcel layer for which FAR will be calculated."
+        },
+        {
+            "layer_name": "Buildings",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "NumFloors"
+            ],
+            "optional_fields": [],
+            "notes": "Building footprints containing the number of floors for each structure."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate the footprint area for each building.",
+            "parameters": {
+                "geometry_property": [
+                    [
+                        "FootprintArea",
+                        "AREA"
+                    ]
+                ],
+                "area_unit": "SQUARE_METERS"
+            },
+            "inputs": [
+                {
+                    "source": "user_input",
+                    "layer_name": "Buildings"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Buildings_With_Area",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "FootprintArea"
+                    ],
+                    "path_hint": "project.gdb/Buildings_With_Area"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Check for zero area",
+                    "how": "Select by attributes where FootprintArea <= 0",
+                    "pass_condition": "Selection count is 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Calculate Field",
+            "purpose": "Calculate the total floor area for each individual building (Footprint Area * Number of Floors).",
+            "parameters": {
+                "field": "BuildingFloorArea",
+                "expression": "!FootprintArea! * !NumFloors!",
+                "expression_type": "PYTHON3"
+            },
+            "inputs": [
+                {
+                    "source": "S1.layer_name",
+                    "layer_name": "Buildings_With_Area"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Buildings_With_FloorArea",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "BuildingFloorArea"
+                    ],
+                    "path_hint": "project.gdb/Buildings_With_FloorArea"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Check for null floor area",
+                    "how": "Select by attributes where BuildingFloorArea IS NULL",
+                    "pass_condition": "Selection count is 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S3",
+            "tool": "Spatial Join",
+            "purpose": "Aggregate the total floor area of all buildings within each parcel.",
+            "parameters": {
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "join_type": "KEEP_ALL",
+                "match_option": "HAVE_THEIR_CENTER_IN",
+                "field_mapping": "BuildingFloorArea (SUM)"
+            },
+            "inputs": [
+                {
+                    "source": "user_input",
+                    "layer_name": "Parcels"
+                },
+                {
+                    "source": "S2.layer_name",
+                    "layer_name": "Buildings_With_FloorArea"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Parcels_Aggregated",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "Sum_BuildingFloorArea"
+                    ],
+                    "path_hint": "project.gdb/Parcels_Aggregated"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Verify join count",
+                    "how": "Compare record count of output with input Parcels",
+                    "pass_condition": "Record counts are equal"
+                }
+            ]
+        },
+        {
+            "step_id": "S4",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate the area of each parcel.",
+            "parameters": {
+                "geometry_property": [
+                    [
+                        "ParcelArea",
+                        "AREA"
+                    ]
+                ],
+                "area_unit": "SQUARE_METERS"
+            },
+            "inputs": [
+                {
+                    "source": "S3.layer_name",
+                    "layer_name": "Parcels_Aggregated"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Parcels_With_ParcelArea",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "ParcelArea"
+                    ],
+                    "path_hint": "project.gdb/Parcels_With_ParcelArea"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Check for zero parcel area",
+                    "how": "Select by attributes where ParcelArea <= 0",
+                    "pass_condition": "Selection count is 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S5",
+            "tool": "Calculate Field",
+            "purpose": "Calculate the Floor Area Ratio (FAR) by dividing total floor area by parcel area.",
+            "parameters": {
+                "field": "FAR",
+                "expression": "(!Sum_BuildingFloorArea! or 0) / !ParcelArea!",
+                "expression_type": "PYTHON3"
+            },
+            "inputs": [
+                {
+                    "source": "S4.layer_name",
+                    "layer_name": "Parcels_With_ParcelArea"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Final_Parcels_FAR",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "FAR"
+                    ],
+                    "path_hint": "project.gdb/Final_Parcels_FAR"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Check for extreme FAR values",
+                    "how": "Select by attributes where FAR > 50",
+                    "pass_condition": "Selection count is 0 (or very low, indicating outliers to investigate)"
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "Final_Parcels_FAR",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": [
+                "Parcel_ID",
+                "Sum_BuildingFloorArea",
+                "ParcelArea",
+                "FAR"
+            ],
+            "description": "Parcel layer containing the calculated Floor Area Ratio (FAR) for each property."
+        }
+    ],
+    "assumptions": [
+        "The Buildings layer has a 'NumFloors' field representing the number of stories.",
+        "Buildings are entirely contained within or have their center in a single parcel.",
+        "The coordinate system is a projected system suitable for area calculations.",
+        "Parcels without buildings will result in a FAR of 0."
+    ]
+}

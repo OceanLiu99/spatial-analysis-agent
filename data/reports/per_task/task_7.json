@@ -1,0 +1,17 @@
+{
+  "task_id": "task_7",
+  "truth_file": "task_7.json",
+  "pred_file": "pred_task_7.json",
+  "schema_errors": 0,
+  "schema_warnings": 0,
+  "schema_issue_samples": [],
+  "tool_seq_similarity": 1.0,
+  "buffer_param_score": 1.0,
+  "layer_jaccard": 1.0,
+  "field_jaccard": 0.3333,
+  "overall": 0.8667,
+  "error_notes": [
+    "missing fields in pred: id",
+    "extra fields in pred: density"
+  ]
+}

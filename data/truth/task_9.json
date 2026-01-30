@@ -1,0 +1,40 @@
+{
+    "workflow_name": "Restaurant Kernel Density",
+    "task_statement": "Generate restaurant kernel density in the Loop community.",
+    "arcgis_context": { "workspace": "project.gdb", "coordinate_system": "WGS 1984", "linear_unit": "Meters", "area_unit": "Square Meters" },
+    "inputs": [
+        { "layer_name": "poi", "geometry_type": "Point", "required_fields": ["poi_type"], "optional_fields": [], "notes": "" },
+        { "layer_name": "community", "geometry_type": "Polygon", "required_fields": ["name"], "optional_fields": [], "notes": "" }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Loop boundary.",
+            "parameters": {"where_clause": "name = 'Loop'"},
+            "inputs": [{"source": "inputs", "layer_name": "community"}],
+            "outputs": [{"name": "loop", "type": "Feature Layer", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/loop"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S2",
+            "tool": "Clip",
+            "purpose": "Get restaurants in Loop.",
+            "parameters": {},
+            "inputs": [{"source": "inputs", "layer_name": "poi"}, {"source": "S1.loop", "layer_name": "loop"}],
+            "outputs": [{"name": "loop_poi", "type": "Feature Class", "geometry_type": "Point", "new_fields": [], "path_hint": "project.gdb/loop_poi"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S3",
+            "tool": "Kernel Density",
+            "purpose": "Generate density raster.",
+            "parameters": {"search_radius": "500 Meters"},
+            "inputs": [{"source": "S2.loop_poi", "layer_name": "loop_poi"}],
+            "outputs": [{"name": "rest_density", "type": "Raster", "geometry_type": "Raster", "new_fields": [], "path_hint": "project.gdb/rest_density"}],
+            "qc_checks": []
+        }
+    ],
+    "outputs": [{"name": "rest_density", "type": "Raster", "geometry_type": "Raster", "fields": [], "description": "Kernel density raster."}],
+    "assumptions": ["Input data is projected in WGS 1984."]
+}

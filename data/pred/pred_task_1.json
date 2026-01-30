@@ -1,0 +1,121 @@
+{
+    "workflow_name": "Chicago Loop Parcel Extraction",
+    "task_statement": "Clip all parcel features within the Loop community boundary in Chicago.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "NAD 1983 StatePlane Illinois East FIPS 1201 (US Feet)",
+        "linear_unit": "Feet",
+        "area_unit": "Square Feet"
+    },
+    "inputs": [
+        {
+            "layer_name": "chicago_communities",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "community_name"
+            ],
+            "optional_fields": [],
+            "notes": "Layer containing the boundaries of Chicago community areas."
+        },
+        {
+            "layer_name": "chicago_parcels",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "parcel_id"
+            ],
+            "optional_fields": [],
+            "notes": "City-wide parcel dataset."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Isolate the 'Loop' community boundary from the city-wide community layer.",
+            "parameters": {
+                "where_clause": "community_name = 'LOOP'",
+                "selection_type": "NEW_SELECTION"
+            },
+            "inputs": [
+                {
+                    "source": "user_input",
+                    "layer_name": "chicago_communities"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "loop_boundary",
+                    "type": "Feature Layer",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/loop_boundary"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Selection Count",
+                    "how": "Verify the number of selected features in loop_boundary.",
+                    "pass_condition": "count == 1"
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Clip",
+            "purpose": "Extract parcels that fall within the Loop community boundary.",
+            "parameters": {},
+            "inputs": [
+                {
+                    "source": "user_input",
+                    "layer_name": "chicago_parcels"
+                },
+                {
+                    "source": "S1.loop_boundary",
+                    "layer_name": "loop_boundary"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "loop_parcels",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/loop_parcels"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Output Existence",
+                    "how": "Check if the output feature class contains features.",
+                    "pass_condition": "count > 0"
+                },
+                {
+                    "check": "Spatial Integrity",
+                    "how": "Verify that all output parcels are within the Loop boundary extent.",
+                    "pass_condition": "true"
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "loop_parcels",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": [
+                "parcel_id"
+            ],
+            "description": "A feature class containing only the parcels located within the Chicago Loop community area."
+        }
+    ],
+    "assumptions": [
+        "The input layer 'chicago_communities' contains a field named 'community_name' where the Loop is identified as 'LOOP'.",
+        "The input layers are already in a projected coordinate system suitable for Chicago (e.g., State Plane Illinois East).",
+        "The user has provided or has access to both the community boundaries and the parcel dataset."
+    ],
+    "clarifying_questions": [
+        "What is the exact name of the attribute field used to identify the Loop community in your data?",
+        "Are the parcels and community boundaries stored in the same coordinate system?",
+        "Should the clip include parcels that only partially overlap the boundary, or only those completely within?"
+    ]
+}

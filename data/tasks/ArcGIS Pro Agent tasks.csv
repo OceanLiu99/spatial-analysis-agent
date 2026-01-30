@@ -1,0 +1,11 @@
+task_id,task_type,task_statement,input_layer_1,required_field_1,input_layer_2,required_field_2,input_layer_3,required_field_3
+1,Clip,Clip all parcel features within the Loop community boundary in Chicago.,parcel,id,community,"id, name",,
+2,Select,Select residential parcels located within a 200 m buffer of highways.,parcel,"id, land_use",road,road_level,,
+3,Select,Select residential parcels within 100 m of arterial roads and located outside park boundaries.,parcel,"id, land_use",road,road_level,park,id
+4,Select,Select the community with the largest total area in Chicago.,community,"id, name",,,,
+5,Select,Select the community with the highest number of metro stations in Chicago.,community,"id, name",metro_station,id,,
+6,Calculate,Calculate the distance from each restaurant to its nearest metro station and select restaurants within 1 km.,poi,"id, poi_type",metro_station,id,,
+7,Calculate,Calculate the area of each high density commercial parcel.,parcel,"id, land_use",,,,
+8,Calculate,Calculate the floor area ratio for each parcel.,parcel,id,building,"id, story",,
+9,Generate,Generate a kernel density map of restaurant POIs within the Loop community in Chicago.,poi,"id, poi_type",community,"id, name",,
+10,Generate,"Generate a renewal potential index for each community in Chicago based on building age and floor area ratio, where older buildings and lower FAR indicate higher renewal potential.",parcel,"id, built_year",community,id,building,"id, story"

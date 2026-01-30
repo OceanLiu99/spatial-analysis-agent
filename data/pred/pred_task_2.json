@@ -1,0 +1,153 @@
+{
+    "workflow_name": "Residential Parcels Near Highways Analysis",
+    "task_statement": "Select residential parcels located within a 200 m buffer of highways.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "Projected Coordinate System (e.g., UTM or State Plane)",
+        "linear_unit": "Meters",
+        "area_unit": "Square Meters"
+    },
+    "inputs": [
+        {
+            "layer_name": "Parcels",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "LandUse"
+            ],
+            "optional_fields": [],
+            "notes": "Contains land use classification for all property parcels."
+        },
+        {
+            "layer_name": "Highways",
+            "geometry_type": "Polyline",
+            "required_fields": [
+                "RoadType"
+            ],
+            "optional_fields": [],
+            "notes": "Line features representing the highway network."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Filter the parcels layer to include only residential properties.",
+            "parameters": {
+                "where_clause": "LandUse = 'Residential'",
+                "selection_type": "NEW_SELECTION"
+            },
+            "inputs": [
+                {
+                    "source": "Parcels",
+                    "layer_name": "Parcels"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Residential_Parcels",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/Residential_Parcels"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Feature count check",
+                    "how": "Verify the number of features in the output layer.",
+                    "pass_condition": "Output count > 0 and less than or equal to original Parcels count."
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Buffer",
+            "purpose": "Create a 200-meter proximity zone around highway features.",
+            "parameters": {
+                "buffer_distance": "200 Meters",
+                "dissolve_option": "ALL"
+            },
+            "inputs": [
+                {
+                    "source": "Highways",
+                    "layer_name": "Highways"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Highways_Buffer_200m",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/Highways_Buffer_200m"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Buffer distance verification",
+                    "how": "Measure the distance from a highway line to the buffer edge.",
+                    "pass_condition": "Distance equals 200 meters."
+                }
+            ]
+        },
+        {
+            "step_id": "S3",
+            "tool": "Spatial Join",
+            "purpose": "Identify residential parcels that intersect the 200m highway buffer.",
+            "parameters": {
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "match_option": "INTERSECT"
+            },
+            "inputs": [
+                {
+                    "source": "S1.Residential_Parcels",
+                    "layer_name": "Residential_Parcels"
+                },
+                {
+                    "source": "S2.Highways_Buffer_200m",
+                    "layer_name": "Highways_Buffer_200m"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Selected_Residential_Parcels",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "Join_Count"
+                    ],
+                    "path_hint": "project.gdb/Selected_Residential_Parcels"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Spatial intersection check",
+                    "how": "Verify that all output parcels overlap with the buffer layer.",
+                    "pass_condition": "All features in output have a Join_Count > 0."
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "Selected_Residential_Parcels",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": [
+                "LandUse",
+                "Join_Count"
+            ],
+            "description": "A feature class containing residential parcels located within 200 meters of a highway."
+        }
+    ],
+    "assumptions": [
+        "The 'Parcels' layer contains an attribute field named 'LandUse' where 'Residential' is a valid value.",
+        "The input data is in a projected coordinate system using meters as the linear unit.",
+        "The user wants the entire parcel geometry if any part of it falls within the 200m buffer."
+    ],
+    "clarifying_questions": [
+        "What is the exact field name and attribute value used to identify 'residential' parcels in your dataset?",
+        "Should the output be the full parcel geometry, or should the parcels be clipped to the 200m buffer boundary?",
+        "Are there specific types of highways (e.g., Interstates only) that should be included in the buffer analysis?"
+    ]
+}

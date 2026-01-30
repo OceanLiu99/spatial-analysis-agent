@@ -1,0 +1,64 @@
+{
+    "workflow_name": "Complex Parcel Selection",
+    "task_statement": "Select residential parcels within 100 m of arterial roads and located outside park boundaries.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "WGS 1984",
+        "linear_unit": "Meters",
+        "area_unit": "Square Meters"
+    },
+    "inputs": [
+        { "layer_name": "parcel", "geometry_type": "Polygon", "required_fields": ["id", "land_use"], "optional_fields": [], "notes": "" },
+        { "layer_name": "road", "geometry_type": "Polyline", "required_fields": ["road_level"], "optional_fields": [], "notes": "" },
+        { "layer_name": "park", "geometry_type": "Polygon", "required_fields": ["id"], "optional_fields": [], "notes": "" }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Filter arterial roads.",
+            "parameters": {"where_clause": "road_level = 'Arterial'"},
+            "inputs": [{"source": "inputs", "layer_name": "road"}],
+            "outputs": [{"name": "arterials", "type": "Feature Layer", "geometry_type": "Polyline", "new_fields": [], "path_hint": "project.gdb/arterials"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S2",
+            "tool": "Buffer",
+            "purpose": "100m road buffer.",
+            "parameters": {"distance": "100 Meters"},
+            "inputs": [{"source": "S1.arterials", "layer_name": "arterials"}],
+            "outputs": [{"name": "road_buffer", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/road_buffer"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S3",
+            "tool": "Intersect",
+            "purpose": "Parcels near roads.",
+            "parameters": {},
+            "inputs": [{"source": "inputs", "layer_name": "parcel"}, {"source": "S2.road_buffer", "layer_name": "road_buffer"}],
+            "outputs": [{"name": "near_road_parcels", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/near_road_parcels"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S4",
+            "tool": "Spatial Join",
+            "purpose": "Identify parcels inside parks.",
+            "parameters": {"join_operation": "JOIN_ONE_TO_ONE", "match_option": "INTERSECT"},
+            "inputs": [{"source": "S3.near_road_parcels", "layer_name": "near_road_parcels"}, {"source": "inputs", "layer_name": "park"}],
+            "outputs": [{"name": "joined_parks", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["Join_Count"], "path_hint": "project.gdb/joined_parks"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S5",
+            "tool": "Select features using attributes",
+            "purpose": "Filter: Residential AND Join_Count = 0 (outside parks).",
+            "parameters": {"where_clause": "land_use = 'Residential' AND Join_Count = 0"},
+            "inputs": [{"source": "S4.joined_parks", "layer_name": "joined_parks"}],
+            "outputs": [{"name": "final_selection", "type": "Feature Layer", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/final_selection"}],
+            "qc_checks": [{"check": "Exclusion Check", "how": "Verify no overlap with park layer.", "pass_condition": "True"}]
+        }
+    ],
+    "outputs": [{"name": "final_selection", "type": "Feature Class", "geometry_type": "Polygon", "fields": ["id"], "description": "Residential parcels near arterials and outside parks."}],
+    "assumptions": ["Input data is projected in WGS 1984."]
+}

@@ -1,0 +1,111 @@
+{
+    "workflow_name": "High_Density_Commercial_Area_Analysis",
+    "task_statement": "Calculate the area of each high density commercial parcel.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "Projected Coordinate System",
+        "linear_unit": "Meters",
+        "area_unit": "Square Meters"
+    },
+    "inputs": [
+        {
+            "layer_name": "parcels",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "land_use",
+                "density"
+            ],
+            "optional_fields": [],
+            "notes": "Input parcel layer containing land use and density attributes."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Filter the parcels to identify only those classified as high density commercial.",
+            "parameters": {
+                "where_clause": "land_use = 'Commercial' AND density = 'High'",
+                "selection_type": "NEW_SELECTION"
+            },
+            "inputs": [
+                {
+                    "source": "inputs",
+                    "layer_name": "parcels"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "high_density_commercial_parcels",
+                    "type": "Feature Layer",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/high_density_commercial_parcels"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Selection count",
+                    "how": "Check the count of selected features.",
+                    "pass_condition": "Count > 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate the area for each of the filtered high density commercial parcels.",
+            "parameters": {
+                "geometry_property": [
+                    [
+                        "Area",
+                        "AREA"
+                    ]
+                ],
+                "area_unit": "SQUARE_METERS",
+                "coordinate_system": "SAME_AS_INPUT"
+            },
+            "inputs": [
+                {
+                    "source": "S1.high_density_commercial_parcels",
+                    "layer_name": "high_density_commercial_parcels"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "parcels_with_area",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "Area"
+                    ],
+                    "path_hint": "project.gdb/parcels_with_area"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Area field population",
+                    "how": "Verify that the 'Area' field is not null and contains positive values.",
+                    "pass_condition": "Area > 0"
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "parcels_with_area",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": [
+                "land_use",
+                "density",
+                "Area"
+            ],
+            "description": "A feature class containing high density commercial parcels with their calculated area in square meters."
+        }
+    ],
+    "assumptions": [
+        "The input 'parcels' layer contains attributes 'land_use' and 'density' with values 'Commercial' and 'High' respectively.",
+        "The input data is in a projected coordinate system suitable for area calculation."
+    ]
+}

@@ -1,0 +1,205 @@
+{
+    "workflow_name": "Chicago Community Renewal Potential Analysis",
+    "task_statement": "Generate a renewal potential index for each community in Chicago based on building age and floor area ratio, where older buildings and lower FAR indicate higher renewal potential.",
+    "arcgis_context": {
+        "workspace": "Chicago_Renewal.gdb",
+        "coordinate_system": "NAD 1983 StatePlane Illinois East FIPS 1201 (US Feet)",
+        "linear_unit": "Feet",
+        "area_unit": "SquareFeet"
+    },
+    "inputs": [
+        {
+            "layer_name": "Chicago_Communities",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "Community_Name",
+                "Area_ID"
+            ],
+            "optional_fields": [],
+            "notes": "Boundary layer for Chicago community areas."
+        },
+        {
+            "layer_name": "Chicago_Buildings",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "Year_Built",
+                "Total_Floor_Area",
+                "Lot_Area"
+            ],
+            "optional_fields": [],
+            "notes": "Building footprints with attribute data for age and area calculations."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Calculate Field",
+            "purpose": "Calculate the age of each building based on the current year.",
+            "parameters": {
+                "field": "Building_Age",
+                "expression": "2024 - !Year_Built!",
+                "expression_type": "PYTHON3",
+                "field_type": "LONG"
+            },
+            "inputs": [
+                {
+                    "source": "Chicago_Buildings",
+                    "layer_name": "Chicago_Buildings"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Buildings_With_Age",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "Building_Age"
+                    ],
+                    "path_hint": "project.gdb/Buildings_With_Age"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Check for negative age",
+                    "how": "Select by attributes where Building_Age < 0",
+                    "pass_condition": "Selection count is 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Calculate Field",
+            "purpose": "Calculate the Floor Area Ratio (FAR) for each building.",
+            "parameters": {
+                "field": "FAR",
+                "expression": "!Total_Floor_Area! / !Lot_Area!",
+                "expression_type": "PYTHON3",
+                "field_type": "DOUBLE"
+            },
+            "inputs": [
+                {
+                    "source": "S1.Buildings_With_Age",
+                    "layer_name": "Buildings_With_Age"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Buildings_With_Metrics",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "FAR"
+                    ],
+                    "path_hint": "project.gdb/Buildings_With_Metrics"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Check for null FAR",
+                    "how": "Check if FAR is null or zero",
+                    "pass_condition": "FAR > 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S3",
+            "tool": "Spatial Join",
+            "purpose": "Aggregate building metrics (average age and average FAR) to the community level.",
+            "parameters": {
+                "target_features": "Chicago_Communities",
+                "join_features": "Buildings_With_Metrics",
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "field_mapping": "Building_Age Mean; FAR Mean"
+            },
+            "inputs": [
+                {
+                    "source": "Chicago_Communities",
+                    "layer_name": "Chicago_Communities"
+                },
+                {
+                    "source": "S2.Buildings_With_Metrics",
+                    "layer_name": "Buildings_With_Metrics"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Community_Aggregated_Metrics",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "MEAN_Building_Age",
+                        "MEAN_FAR"
+                    ],
+                    "path_hint": "project.gdb/Community_Aggregated_Metrics"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Verify join count",
+                    "how": "Compare feature count with Chicago_Communities",
+                    "pass_condition": "Feature counts match"
+                }
+            ]
+        },
+        {
+            "step_id": "S4",
+            "tool": "Calculate Field",
+            "purpose": "Calculate the Renewal Potential Index. Higher index = higher age and lower FAR.",
+            "parameters": {
+                "field": "Renewal_Index",
+                "expression": "(!MEAN_Building_Age! * 0.5) + ((1 / (!MEAN_FAR! + 0.01)) * 0.5)",
+                "expression_type": "PYTHON3",
+                "field_type": "DOUBLE"
+            },
+            "inputs": [
+                {
+                    "source": "S3.Community_Aggregated_Metrics",
+                    "layer_name": "Community_Aggregated_Metrics"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Chicago_Renewal_Potential",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "Renewal_Index"
+                    ],
+                    "path_hint": "project.gdb/Chicago_Renewal_Potential"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Check index distribution",
+                    "how": "Calculate statistics on Renewal_Index",
+                    "pass_condition": "Index values are positive and vary across communities"
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "Chicago_Renewal_Potential",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": [
+                "Community_Name",
+                "MEAN_Building_Age",
+                "MEAN_FAR",
+                "Renewal_Index"
+            ],
+            "description": "A community-level map showing the renewal potential index based on building age and density."
+        }
+    ],
+    "assumptions": [
+        "The input Chicago_Buildings layer contains valid 'Year_Built', 'Total_Floor_Area', and 'Lot_Area' fields.",
+        "The current year for age calculation is 2024.",
+        "A simple additive model is used for the index where Age and the inverse of FAR are weighted equally (50/50).",
+        "A small constant (0.01) is added to FAR during division to prevent division by zero errors."
+    ],
+    "clarifying_questions": [
+        "Are there specific weights you would like to assign to Building Age versus FAR in the final index?",
+        "Do you have a specific normalization method (e.g., Z-score or Min-Max) preferred for the index calculation?",
+        "Should buildings with specific usage types (e.g., historic landmarks) be excluded from the renewal potential calculation?"
+    ]
+}

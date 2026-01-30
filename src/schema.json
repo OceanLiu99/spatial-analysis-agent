@@ -1,0 +1,64 @@
+{
+  "workflow_name": "",
+  "task_statement": "",
+  "arcgis_context": {
+    "workspace": "",
+    "coordinate_system": "",
+    "linear_unit": "",
+    "area_unit": ""
+  },
+  "inputs": [
+    {
+      "layer_name": "",
+      "geometry_type": "",
+      "required_fields": [],
+      "optional_fields": [],
+      "notes": ""
+    }
+  ],
+  "steps": [
+    {
+      "step_id": "S1",
+      "tool": "",
+      "purpose": "",
+      "parameters": {},
+      "inputs": [
+        {
+          "source": "",
+          "layer_name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "",
+          "geometry_type": "",
+          "new_fields": [],
+          "path_hint": ""
+        }
+      ],
+      "qc_checks": [
+        {
+          "check": "",
+          "how": "",
+          "pass_condition": ""
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "",
+      "type": "",
+      "geometry_type": "",
+      "fields": [],
+      "description": ""
+    }
+  ],
+  "assumptions": [
+    ""
+  ],
+  "clarifying_questions": [
+    ""
+  ]
+}

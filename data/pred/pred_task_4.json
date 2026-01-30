@@ -1,0 +1,114 @@
+{
+    "workflow_name": "Chicago Largest Community Selection",
+    "task_statement": "Select the community with the largest total area in Chicago.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "NAD 1983 StatePlane Illinois East FIPS 1201 (US Feet)",
+        "linear_unit": "Feet",
+        "area_unit": "Square Feet"
+    },
+    "inputs": [
+        {
+            "layer_name": "chicago_communities",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "community"
+            ],
+            "optional_fields": [],
+            "notes": "The input layer containing Chicago community boundaries."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate the area for each community polygon to ensure accurate comparison.",
+            "parameters": {
+                "geometry_property": [
+                    [
+                        "Calc_Area",
+                        "AREA"
+                    ]
+                ],
+                "area_unit": "SQUARE_FEET_US"
+            },
+            "inputs": [
+                {
+                    "source": "user_input",
+                    "layer_name": "chicago_communities"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "communities_with_area",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "Calc_Area"
+                    ],
+                    "path_hint": "project.gdb/communities_with_area"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Field existence",
+                    "how": "Verify if 'Calc_Area' field exists in the output table.",
+                    "pass_condition": "Field exists"
+                },
+                {
+                    "check": "Positive area values",
+                    "how": "Check if all values in 'Calc_Area' are greater than 0.",
+                    "pass_condition": "All values > 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Select features using attributes",
+            "purpose": "Identify and isolate the community with the maximum calculated area.",
+            "parameters": {
+                "selection_type": "NEW_SELECTION",
+                "where_clause": "Calc_Area = (SELECT MAX(Calc_Area) FROM communities_with_area)"
+            },
+            "inputs": [
+                {
+                    "source": "S1.communities_with_area",
+                    "layer_name": "communities_with_area"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "largest_community",
+                    "type": "Feature Layer",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/largest_community"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Selection count",
+                    "how": "Count the number of selected features.",
+                    "pass_condition": "Count >= 1"
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "largest_community",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": [
+                "community",
+                "Calc_Area"
+            ],
+            "description": "The polygon representing the community in Chicago with the largest total area."
+        }
+    ],
+    "assumptions": [
+        "The input layer 'chicago_communities' contains valid polygon geometries.",
+        "The coordinate system is a projected system suitable for area calculations.",
+        "The SQL subquery syntax is supported by the workspace (File Geodatabase)."
+    ]
+}

@@ -1,0 +1,19 @@
+{
+  "task_id": "task_8",
+  "truth_file": "task_8.json",
+  "pred_file": "pred_task_8.json",
+  "schema_errors": 0,
+  "schema_warnings": 0,
+  "schema_issue_samples": [],
+  "tool_seq_similarity": 0.8,
+  "buffer_param_score": 1.0,
+  "layer_jaccard": 1.0,
+  "field_jaccard": 0.0,
+  "overall": 0.73,
+  "error_notes": [
+    "step[2] tool mismatch, truth=calculate_geometry_attributes, pred=spatial_join",
+    "step[3] tool mismatch, truth=spatial_join, pred=calculate_geometry_attributes",
+    "missing fields in pred: id, story",
+    "extra fields in pred: buildingfloorarea, far, numfloors, parcel_id"
+  ]
+}

@@ -1,0 +1,135 @@
+{
+    "workflow_name": "Restaurant_Metro_Proximity_Analysis",
+    "task_statement": "Calculate the distance from each restaurant to its nearest metro station and select restaurants within 1 km.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "Projected_Coordinate_System",
+        "linear_unit": "Meters",
+        "area_unit": "Square Meters"
+    },
+    "inputs": [
+        {
+            "layer_name": "restaurants",
+            "geometry_type": "Point",
+            "required_fields": [
+                "OBJECTID"
+            ],
+            "optional_fields": [
+                "Name"
+            ],
+            "notes": "Point layer representing restaurant locations."
+        },
+        {
+            "layer_name": "metro_stations",
+            "geometry_type": "Point",
+            "required_fields": [
+                "OBJECTID"
+            ],
+            "optional_fields": [
+                "StationName"
+            ],
+            "notes": "Point layer representing metro station locations."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Spatial Join",
+            "purpose": "Calculate the distance from each restaurant to the nearest metro station.",
+            "parameters": {
+                "target_features": "restaurants",
+                "join_features": "metro_stations",
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "join_type": "KEEP_ALL",
+                "match_option": "CLOSEST",
+                "distance_field_name": "Distance_to_Metro"
+            },
+            "inputs": [
+                {
+                    "source": "user_input",
+                    "layer_name": "restaurants"
+                },
+                {
+                    "source": "user_input",
+                    "layer_name": "metro_stations"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "restaurants_with_distance",
+                    "type": "Feature Class",
+                    "geometry_type": "Point",
+                    "new_fields": [
+                        "Distance_to_Metro"
+                    ],
+                    "path_hint": "project.gdb/restaurants_with_distance"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Distance field existence",
+                    "how": "Verify if 'Distance_to_Metro' field exists in the output attribute table.",
+                    "pass_condition": "Field 'Distance_to_Metro' exists."
+                },
+                {
+                    "check": "Distance values",
+                    "how": "Check if distance values are non-negative.",
+                    "pass_condition": "All values in 'Distance_to_Metro' >= 0."
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Select features using attributes",
+            "purpose": "Filter restaurants that are within 1000 meters (1 km) of a metro station.",
+            "parameters": {
+                "in_layer_or_view": "S1.restaurants_with_distance",
+                "selection_type": "NEW_SELECTION",
+                "where_clause": "Distance_to_Metro <= 1000"
+            },
+            "inputs": [
+                {
+                    "source": "S1.restaurants_with_distance",
+                    "layer_name": "restaurants_with_distance"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "restaurants_within_1km",
+                    "type": "Feature Class",
+                    "geometry_type": "Point",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/restaurants_within_1km"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Selection criteria",
+                    "how": "Check the maximum value of 'Distance_to_Metro' in the output.",
+                    "pass_condition": "Max(Distance_to_Metro) <= 1000."
+                },
+                {
+                    "check": "Feature count",
+                    "how": "Compare output count with input count.",
+                    "pass_condition": "Output count <= Input count."
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "restaurants_within_1km",
+            "type": "Feature Class",
+            "geometry_type": "Point",
+            "fields": [
+                "Distance_to_Metro"
+            ],
+            "description": "Restaurants located within 1 kilometer of the nearest metro station, including the calculated distance."
+        }
+    ],
+    "assumptions": [
+        "Input layers are in a projected coordinate system where the linear unit is meters.",
+        "The 'Spatial Join' tool correctly calculates the geodesic or planar distance based on the environment settings.",
+        "1 km is equivalent to 1000 meters in the current coordinate system."
+    ]
+}

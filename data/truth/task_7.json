@@ -1,0 +1,30 @@
+{
+    "workflow_name": "Calculate Commercial Parcel Area",
+    "task_statement": "Calculate area of high density commercial parcels.",
+    "arcgis_context": { "workspace": "project.gdb", "coordinate_system": "WGS 1984", "linear_unit": "Meters", "area_unit": "Square Meters" },
+    "inputs": [
+        { "layer_name": "parcel", "geometry_type": "Polygon", "required_fields": ["id", "land_use"], "optional_fields": [], "notes": "" }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Filter land use.",
+            "parameters": {"where_clause": "land_use = 'High Density Commercial'"},
+            "inputs": [{"source": "inputs", "layer_name": "parcel"}],
+            "outputs": [{"name": "comm_parcels", "type": "Feature Layer", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/comm_parcels"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S2",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate area.",
+            "parameters": {"geometry_property": "AREA", "area_unit": "SQUARE_METERS"},
+            "inputs": [{"source": "S1.comm_parcels", "layer_name": "comm_parcels"}],
+            "outputs": [{"name": "comm_with_area", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["AREA_SQM"], "path_hint": "project.gdb/comm_with_area"}],
+            "qc_checks": []
+        }
+    ],
+    "outputs": [{"name": "comm_with_area", "type": "Feature Class", "geometry_type": "Polygon", "fields": ["id", "AREA_SQM"], "description": "Commercial parcels with area."}],
+    "assumptions": ["Input data is projected in WGS 1984."]
+}

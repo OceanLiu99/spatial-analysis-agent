@@ -1,0 +1,77 @@
+{
+    "workflow_name": "Select Parcels Near Highways",
+    "task_statement": "Select residential parcels located within a 200 m buffer of highways.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "WGS 1984",
+        "linear_unit": "Meters",
+        "area_unit": "Square Meters"
+    },
+    "inputs": [
+        {
+            "layer_name": "parcel",
+            "geometry_type": "Polygon",
+            "required_fields": ["id", "land_use"],
+            "optional_fields": [],
+            "notes": ""
+        },
+        {
+            "layer_name": "road",
+            "geometry_type": "Polyline",
+            "required_fields": ["road_level"],
+            "optional_fields": [],
+            "notes": ""
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Filter for highways.",
+            "parameters": {"where_clause": "road_level = 'Highway'"},
+            "inputs": [{"source": "inputs", "layer_name": "road"}],
+            "outputs": [{"name": "highways", "type": "Feature Layer", "geometry_type": "Polyline", "new_fields": [], "path_hint": "project.gdb/highways"}],
+            "qc_checks": [{"check": "Content Check", "how": "Verify highway features exist.", "pass_condition": "Count > 0"}]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Buffer",
+            "purpose": "Create 200m proximity zone.",
+            "parameters": {"distance": "200 Meters"},
+            "inputs": [{"source": "S1.highways", "layer_name": "highways"}],
+            "outputs": [{"name": "highway_buffer", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/highway_buffer"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S3",
+            "tool": "Intersect",
+            "purpose": "Find residential parcels in buffer.",
+            "parameters": {},
+            "inputs": [
+                {"source": "inputs", "layer_name": "parcel"},
+                {"source": "S2.highway_buffer", "layer_name": "highway_buffer"}
+            ],
+            "outputs": [{"name": "intersect_res", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/intersect_res"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S4",
+            "tool": "Select features using attributes",
+            "purpose": "Ensure only residential land use is included.",
+            "parameters": {"where_clause": "land_use = 'Residential'"},
+            "inputs": [{"source": "S3.intersect_res", "layer_name": "intersect_res"}],
+            "outputs": [{"name": "final_parcels", "type": "Feature Layer", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/final_parcels"}],
+            "qc_checks": [{"check": "Attribute Validation", "how": "Check land_use field.", "pass_condition": "land_use == 'Residential'"}]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "final_parcels",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": ["id", "land_use"],
+            "description": "Residential parcels within 200m of highways."
+        }
+    ],
+    "assumptions": ["Input data is projected in WGS 1984."]
+}

@@ -1,0 +1,61 @@
+{
+    "workflow_name": "Floor Area Ratio Calculation",
+    "task_statement": "Calculate FAR (Total Floor Area / Parcel Area) for each parcel using building stories.",
+    "arcgis_context": {"workspace": "project.gdb", "coordinate_system": "WGS 1984", "linear_unit": "Meters", "area_unit": "Square Meters"},
+    "inputs": [
+        {"layer_name": "parcel", "geometry_type": "Polygon", "required_fields": ["id"], "optional_fields": [], "notes": "Parcel boundaries for lot area calculation."},
+        {"layer_name": "building", "geometry_type": "Polygon", "required_fields": ["story"], "optional_fields": [], "notes": "Building footprints with story count attribute."}
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate the footprint area for each building.",
+            "parameters": {"geometry_property": "AREA", "area_unit": "SQUARE_METERS"},
+            "inputs": [{"source": "inputs", "layer_name": "building"}],
+            "outputs": [{"name": "building_footprint_area", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["FOOTPRINT_AREA"], "path_hint": "project.gdb/building_footprint_area"}],
+            "qc_checks": [{"check": "Positive Area", "how": "Verify FOOTPRINT_AREA > 0", "pass_condition": "True"}]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Calculate Field",
+            "purpose": "Calculate total floor area per building (Footprint Area * Stories).",
+            "parameters": {"field_name": "TOTAL_FLOOR_AREA", "expression": "!FOOTPRINT_AREA! * !story!"},
+            "inputs": [{"source": "S1.building_footprint_area", "layer_name": "building_footprint_area"}],
+            "outputs": [{"name": "building_with_floor_area", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["TOTAL_FLOOR_AREA"], "path_hint": "project.gdb/building_with_floor_area"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S3",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate the area of each parcel.",
+            "parameters": {"geometry_property": "AREA", "area_unit": "SQUARE_METERS"},
+            "inputs": [{"source": "inputs", "layer_name": "parcel"}],
+            "outputs": [{"name": "parcel_with_area", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["PARCEL_AREA"], "path_hint": "project.gdb/parcel_with_area"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S4",
+            "tool": "Spatial Join",
+            "purpose": "Sum the total floor area of all buildings within each parcel.",
+            "parameters": {"join_operation": "JOIN_ONE_TO_ONE", "match_option": "COMPLETELY_CONTAINS", "field_mapping": "TOTAL_FLOOR_AREA SUM"},
+            "inputs": [{"source": "S3.parcel_with_area", "layer_name": "parcel_with_area"},{"source": "S2.building_with_floor_area", "layer_name": "building_with_floor_area"}],
+            "outputs": [{"name": "parcel_bldg_sum", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["SUM_TOTAL_FLOOR_AREA"], "path_hint": "project.gdb/parcel_bldg_sum"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S5",
+            "tool": "Calculate Field",
+            "purpose": "Calculate FAR (Sum of Floor Areas / Parcel Area).",
+            "parameters": {"field_name": "FAR","expression": "!SUM_TOTAL_FLOOR_AREA! / !PARCEL_AREA!"},
+            "inputs": [{"source": "S4.parcel_bldg_sum", "layer_name": "parcel_bldg_sum"}],
+            "outputs": [{"name": "final_far_parcels", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["FAR"], "path_hint": "project.gdb/final_far_parcels"}],
+            "qc_checks": [{"check": "Output count", "how": "Check if output features match input parcel count.", "pass_condition": "True"}]
+        }
+    ],
+    "outputs": [{"name": "final_far_parcels", "type": "Feature Class", "geometry_type": "Polygon", "fields": ["id", "PARCEL_AREA", "SUM_TOTAL_FLOOR_AREA", "FAR"], "description": "Parcel layer containing calculated Floor Area Ratio (FAR)."}],
+    "assumptions": [
+        "Input data is projected in WGS 1984.",
+        "Buildings are completely contained within parcel boundaries for valid spatial join."
+    ]
+}

@@ -1,0 +1,17 @@
+{
+  "task_id": "task_9",
+  "truth_file": "task_9.json",
+  "pred_file": "pred_task_9.json",
+  "schema_errors": 0,
+  "schema_warnings": 0,
+  "schema_issue_samples": [],
+  "tool_seq_similarity": 1.0,
+  "buffer_param_score": 1.0,
+  "layer_jaccard": 1.0,
+  "field_jaccard": 0.0,
+  "overall": 0.8,
+  "error_notes": [
+    "missing fields in pred: name, poi_type",
+    "extra fields in pred: category, community"
+  ]
+}

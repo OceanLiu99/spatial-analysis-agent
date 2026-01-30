@@ -1,0 +1,40 @@
+{
+    "workflow_name": "Restaurant Proximity to Metro",
+    "task_statement": "Calculate distance to nearest metro and select those within 1 km.",
+    "arcgis_context": { "workspace": "project.gdb", "coordinate_system": "WGS 1984", "linear_unit": "Meters", "area_unit": "Square Meters" },
+    "inputs": [
+        { "layer_name": "poi", "geometry_type": "Point", "required_fields": ["id", "poi_type"], "optional_fields": [], "notes": "" },
+        { "layer_name": "metro_station", "geometry_type": "Point", "required_fields": ["id"], "optional_fields": [], "notes": "" }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Filter restaurants.",
+            "parameters": {"where_clause": "poi_type = 'Restaurant'"},
+            "inputs": [{"source": "inputs", "layer_name": "poi"}],
+            "outputs": [{"name": "restaurants", "type": "Feature Layer", "geometry_type": "Point", "new_fields": [], "path_hint": "project.gdb/restaurants"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S2",
+            "tool": "Spatial Join",
+            "purpose": "Calculate distance to nearest station.",
+            "parameters": {"join_operation": "JOIN_ONE_TO_ONE", "match_option": "CLOSEST", "distance_field_name": "DIST_METRO"},
+            "inputs": [{"source": "S1.restaurants", "layer_name": "restaurants"}, {"source": "inputs", "layer_name": "metro_station"}],
+            "outputs": [{"name": "rest_with_dist", "type": "Feature Class", "geometry_type": "Point", "new_fields": ["DIST_METRO"], "path_hint": "project.gdb/rest_with_dist"}],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S3",
+            "tool": "Select features using attributes",
+            "purpose": "Filter within 1km.",
+            "parameters": {"where_clause": "DIST_METRO <= 1000"},
+            "inputs": [{"source": "S2.rest_with_dist", "layer_name": "rest_with_dist"}],
+            "outputs": [{"name": "final_rest", "type": "Feature Layer", "geometry_type": "Point", "new_fields": [], "path_hint": "project.gdb/final_rest"}],
+            "qc_checks": []
+        }
+    ],
+    "outputs": [{"name": "final_rest", "type": "Feature Class", "geometry_type": "Point", "fields": ["id", "DIST_METRO"], "description": "Restaurants within 1km of metro."}],
+    "assumptions": ["Input data is projected in WGS 1984."]
+}

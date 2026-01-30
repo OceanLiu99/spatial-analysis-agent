@@ -1,0 +1,254 @@
+{
+    "workflow_name": "Residential_Parcels_Proximity_Analysis",
+    "task_statement": "Select residential parcels within 100 m of arterial roads and located outside park boundaries.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "Projected Coordinate System (e.g., UTM)",
+        "linear_unit": "Meters",
+        "area_unit": "SquareMeters"
+    },
+    "inputs": [
+        {
+            "layer_name": "Roads",
+            "geometry_type": "Polyline",
+            "required_fields": [
+                "Road_Class"
+            ],
+            "optional_fields": [],
+            "notes": "Contains all road segments with classification attributes."
+        },
+        {
+            "layer_name": "Parcels",
+            "geometry_type": "Polygon",
+            "required_fields": [
+                "Land_Use"
+            ],
+            "optional_fields": [],
+            "notes": "Cadastral data containing land use information."
+        },
+        {
+            "layer_name": "Parks",
+            "geometry_type": "Polygon",
+            "required_fields": [],
+            "optional_fields": [],
+            "notes": "Boundaries of public parks and protected areas."
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Select features using attributes",
+            "purpose": "Filter the roads layer to isolate arterial roads.",
+            "parameters": {
+                "where_clause": "Road_Class = 'Arterial'"
+            },
+            "inputs": [
+                {
+                    "source": "Roads",
+                    "layer_name": "Roads"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Arterial_Roads",
+                    "type": "Feature Class",
+                    "geometry_type": "Polyline",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/Arterial_Roads"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Feature count check",
+                    "how": "Verify the number of selected features.",
+                    "pass_condition": "Count > 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Buffer",
+            "purpose": "Create a 100m proximity zone around arterial roads.",
+            "parameters": {
+                "buffer_distance": "100 Meters",
+                "dissolve_option": "ALL"
+            },
+            "inputs": [
+                {
+                    "source": "S1.Arterial_Roads",
+                    "layer_name": "Arterial_Roads"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Road_Buffer_100m",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/Road_Buffer_100m"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Geometry validation",
+                    "how": "Check if the buffer area is greater than zero.",
+                    "pass_condition": "Shape_Area > 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S3",
+            "tool": "Select features using attributes",
+            "purpose": "Filter the parcels layer to isolate residential properties.",
+            "parameters": {
+                "where_clause": "Land_Use = 'Residential'"
+            },
+            "inputs": [
+                {
+                    "source": "Parcels",
+                    "layer_name": "Parcels"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Residential_Parcels",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/Residential_Parcels"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Attribute check",
+                    "how": "Ensure all output features have 'Residential' land use.",
+                    "pass_condition": "Land_Use = 'Residential'"
+                }
+            ]
+        },
+        {
+            "step_id": "S4",
+            "tool": "Spatial Join",
+            "purpose": "Identify residential parcels that intersect the 100m road buffer.",
+            "parameters": {
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "join_type": "KEEP_COMMON",
+                "match_option": "INTERSECT"
+            },
+            "inputs": [
+                {
+                    "source": "S3.Residential_Parcels",
+                    "layer_name": "Residential_Parcels"
+                },
+                {
+                    "source": "S2.Road_Buffer_100m",
+                    "layer_name": "Road_Buffer_100m"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Parcels_Near_Roads",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "Join_Count"
+                    ],
+                    "path_hint": "project.gdb/Parcels_Near_Roads"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Spatial relationship check",
+                    "how": "Verify Join_Count is greater than 0 for all features.",
+                    "pass_condition": "Join_Count > 0"
+                }
+            ]
+        },
+        {
+            "step_id": "S5",
+            "tool": "Spatial Join",
+            "purpose": "Join park information to the parcels to identify those inside park boundaries.",
+            "parameters": {
+                "join_operation": "JOIN_ONE_TO_ONE",
+                "join_type": "KEEP_ALL",
+                "match_option": "INTERSECT"
+            },
+            "inputs": [
+                {
+                    "source": "S4.Parcels_Near_Roads",
+                    "layer_name": "Parcels_Near_Roads"
+                },
+                {
+                    "source": "Parks",
+                    "layer_name": "Parks"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Parcels_With_Park_Info",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [
+                        "Join_Count_1"
+                    ],
+                    "path_hint": "project.gdb/Parcels_With_Park_Info"
+                }
+            ],
+            "qc_checks": []
+        },
+        {
+            "step_id": "S6",
+            "tool": "Select features using attributes",
+            "purpose": "Filter out parcels that intersect park boundaries (where Join_Count_1 is 0).",
+            "parameters": {
+                "where_clause": "Join_Count_1 = 0"
+            },
+            "inputs": [
+                {
+                    "source": "S5.Parcels_With_Park_Info",
+                    "layer_name": "Parcels_With_Park_Info"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Final_Selected_Parcels",
+                    "type": "Feature Class",
+                    "geometry_type": "Polygon",
+                    "new_fields": [],
+                    "path_hint": "project.gdb/Final_Selected_Parcels"
+                }
+            ],
+            "qc_checks": [
+                {
+                    "check": "Final count check",
+                    "how": "Ensure the final output is not empty.",
+                    "pass_condition": "Count > 0"
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "name": "Final_Selected_Parcels",
+            "type": "Feature Class",
+            "geometry_type": "Polygon",
+            "fields": [
+                "Land_Use",
+                "Road_Class"
+            ],
+            "description": "Residential parcels within 100m of arterial roads and not intersecting any park boundaries."
+        }
+    ],
+    "assumptions": [
+        "The 'Roads' layer contains a field named 'Road_Class' where 'Arterial' is a valid value.",
+        "The 'Parcels' layer contains a field named 'Land_Use' where 'Residential' is a valid value.",
+        "The 'Select features using attributes' tool refers to the Analysis 'Select' tool which creates a new feature class.",
+        "Spatial Join 'Join_Count' fields are used to determine spatial intersection without clipping geometry.",
+        "The coordinate system is projected and uses meters as the linear unit."
+    ],
+    "clarifying_questions": [
+        "What are the exact attribute field names and values used to identify 'arterial roads' and 'residential parcels'?",
+        "Should parcels be excluded if they only partially intersect a park, or only if they are entirely within a park?",
+        "Does the 100m distance refer to the parcel boundary or the parcel centroid?"
+    ]
+}

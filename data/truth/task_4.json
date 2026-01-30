@@ -1,0 +1,35 @@
+{
+    "workflow_name": "Identify Largest Community",
+    "task_statement": "Select the community with the largest total area in Chicago.",
+    "arcgis_context": {
+        "workspace": "project.gdb",
+        "coordinate_system": "WGS 1984",
+        "linear_unit": "Meters",
+        "area_unit": "Square Meters"
+    },
+    "inputs": [
+        { "layer_name": "community", "geometry_type": "Polygon", "required_fields": ["id", "name"], "optional_fields": [], "notes": "" }
+    ],
+    "steps": [
+        {
+            "step_id": "S1",
+            "tool": "Calculate Geometry Attributes",
+            "purpose": "Calculate area of each polygon.",
+            "parameters": {"geometry_property": "AREA", "area_unit": "SQUARE_METERS"},
+            "inputs": [{"source": "inputs", "layer_name": "community"}],
+            "outputs": [{"name": "community_with_area", "type": "Feature Class", "geometry_type": "Polygon", "new_fields": ["POLY_AREA"], "path_hint": "project.gdb/community_with_area"}],
+            "qc_checks": [{"check": "Non-zero area", "how": "Check POLY_AREA > 0", "pass_condition": "True"}]
+        },
+        {
+            "step_id": "S2",
+            "tool": "Select features using attributes",
+            "purpose": "Select record with maximum area.",
+            "parameters": {"where_clause": "POLY_AREA = (SELECT MAX(POLY_AREA) FROM community_with_area)"},
+            "inputs": [{"source": "S1.community_with_area", "layer_name": "community_with_area"}],
+            "outputs": [{"name": "largest_community", "type": "Feature Layer", "geometry_type": "Polygon", "new_fields": [], "path_hint": "project.gdb/largest_community"}],
+            "qc_checks": [{"check": "Single Selection", "how": "Count should be 1.", "pass_condition": "Count == 1"}]
+        }
+    ],
+    "outputs": [{"name": "largest_community", "type": "Feature Class", "geometry_type": "Polygon", "fields": ["name", "POLY_AREA"], "description": "The community with the largest area."}],
+    "assumptions": ["Input data is projected in WGS 1984."]
+}

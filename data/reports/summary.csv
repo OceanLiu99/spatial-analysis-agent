@@ -1,0 +1,11 @@
+task_id,truth_file,pred_file,schema_errors,schema_warnings,tool_seq_similarity,buffer_param_score,layer_jaccard,field_jaccard,overall,top_notes
+"task_1","task_1.json","pred_task_1.json","0","0","1.0","1.0","1.0","0.0","0.8","missing fields in pred: id, name | extra fields in pred: community_name, pin"
+"task_2","task_2.json","pred_task_2.json","0","0","0.5","0.0","1.0","0.25","0.425","missing step at index 3, truth=select_features_using_attributes | buffer[0] missing distance value | missing fields in pred: id, road_level"
+"task_3","task_3.json","pred_task_3.json","0","0","0.6667","0.0","1.0","0.0","0.4333","step[1] tool mismatch, truth=buffer, pred=select_features_using_attributes | step[2] tool mismatch, truth=intersect, pred=buffer | step[4] tool mismatch, truth=select_features_using_attributes, pred=spatial_join"
+"task_4","task_4.json","pred_task_4.json","0","0","1.0","1.0","1.0","0.0","0.8","missing fields in pred: id, name | extra fields in pred: community"
+"task_5","task_5.json","pred_task_5.json","0","0","1.0","1.0","1.0","0.0","0.8","missing fields in pred: id, name | extra fields in pred: area_num, community_name, station_name"
+"task_6","task_6.json","pred_task_6.json","0","0","0.6667","1.0","1.0","0.0","0.6833","step[0] tool mismatch, truth=select_features_using_attributes, pred=spatial_join | step[1] tool mismatch, truth=spatial_join, pred=select_features_using_attributes | missing step at index 2, truth=select_features_using_attributes"
+"task_7","task_7.json","pred_task_7.json","0","0","1.0","1.0","1.0","0.3333","0.8667","missing fields in pred: id | extra fields in pred: density"
+"task_8","task_8.json","pred_task_8.json","0","0","0.8","1.0","1.0","0.0","0.73","step[2] tool mismatch, truth=calculate_geometry_attributes, pred=spatial_join | step[3] tool mismatch, truth=spatial_join, pred=calculate_geometry_attributes | missing fields in pred: id, story"
+"task_9","task_9.json","pred_task_9.json","0","0","1.0","1.0","1.0","0.0","0.8","missing fields in pred: name, poi_type | extra fields in pred: category, community"
+"task_10","task_10.json","pred_task_10.json","0","0","0.625","1.0","1.0","0.0","0.6687","step[2] tool mismatch, truth=calculate_geometry_attributes, pred=calculate_field | step[3] tool mismatch, truth=calculate_field, pred=spatial_join | step[4] tool mismatch, truth=spatial_join, pred=calculate_field"
