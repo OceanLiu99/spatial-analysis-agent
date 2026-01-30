@@ -1,0 +1,43 @@
+{
+  "task_dir": "/Users/ocean/Library/CloudStorage/OneDrive-UniversityofIllinois-Urbana/Projects/geo/spatial-analysis-agent/data/tasks/task_4",
+  "layers": [
+    {
+      "name": "boundaries_community",
+      "path": "/Users/ocean/Library/CloudStorage/OneDrive-UniversityofIllinois-Urbana/Projects/geo/spatial-analysis-agent/data/tasks/task_4/boundaries_community/geo_export_452a8279-f1d9-4f4a-a0ba-70662fbf6490.dbf",
+      "geometry_type": "",
+      "fields": [
+        {
+          "name": "area_numbe",
+          "type": "N",
+          "size": 33,
+          "decimal": 31
+        },
+        {
+          "name": "community",
+          "type": "C",
+          "size": 254,
+          "decimal": 0
+        },
+        {
+          "name": "area_num_1",
+          "type": "C",
+          "size": 254,
+          "decimal": 0
+        },
+        {
+          "name": "shape_area",
+          "type": "N",
+          "size": 33,
+          "decimal": 31
+        },
+        {
+          "name": "shape_len",
+          "type": "N",
+          "size": 33,
+          "decimal": 31
+        }
+      ],
+      "crs": "GEOGCS[\"WGS84(DD)\", DATUM[\"WGS84\", SPHEROID[\"WGS84\", 6378137.0, 298.257223563]], PRIMEM[\"Greenwich\", 0.0], UNIT[\"degree\", 0.017453292519943295], AXIS[\"Geodetic longitude\", EAST], AXIS[\"Geodetic latitude\", NORTH], AUTHORITY[\"EPSG\",\"4326\"]]"
+    }
+  ]
+}

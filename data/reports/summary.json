@@ -1,8 +1,0 @@
-{
-  "count": 10,
-  "avg_overall": 0.7007,
-  "avg_tool_seq_similarity": 0.8258,
-  "avg_buffer_param_score": 0.8,
-  "avg_layer_jaccard": 1.0,
-  "avg_field_jaccard": 0.0583
-}
