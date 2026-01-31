@@ -96,12 +96,16 @@ The app will open in your browser (typically at `http://localhost:8501`).
    - System automatically extracts and displays layer fields
    - View sample attribute rows
 
+![upload_data_bundle](https://github.com/user-attachments/assets/b7087052-e3cc-4427-92cd-3efbfe440396)
+
 2. **Agent Tab**
    - Describe your spatial analysis task in natural language
    - Specify layer name (optional)
    - Click "Generate Workflow" to create the workflow
    - Review workflow as text or JSON
    - Download the generated workflow as `workflow.json`
+![workflow_generated](https://github.com/user-attachments/assets/3958a4f1-2c73-44cc-ac46-76004433a1bb)
+![workflow_json](https://github.com/user-attachments/assets/aeb28eb8-8bc7-4c71-b663-c07f265eb0bd)
 
 
 ## Supported ArcGIS Tools
